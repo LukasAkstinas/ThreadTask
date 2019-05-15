@@ -18,12 +18,14 @@ namespace ThreadTask
     {
         private Thread[] threads;
         private readonly string connectionString;
+        private bool isRunning;
 
 
         public Form1()
         {
             InitializeComponent();
             connectionString = ConfigurationManager.ConnectionStrings["ThreadTask.Properties.Settings.Database1ConnectionString"].ConnectionString;
+            isRunning = false;
             btnStart.Enabled = false;
             btnStop.Enabled = false;
         }
@@ -55,6 +57,7 @@ namespace ThreadTask
 
         private void Start()
         {
+            isRunning = true;
             listView1.Items.Clear();
             int threadCount = int.Parse(textBox1.Text);
             threads = new Thread[threadCount];
@@ -68,6 +71,7 @@ namespace ThreadTask
 
         private void Stop()
         {
+            isRunning = false;
             foreach (Thread t in threads)
             {
                 if (t.ThreadState == ThreadState.WaitSleepJoin) t.Abort(); // only abort sleeping threads, let the rest finish
@@ -77,15 +81,11 @@ namespace ThreadTask
         private void DoWork(int threadId)
         {
             Random rng = new Random((DateTime.Now.Millisecond + threadId) * threadId);
-            while (true)
+            while (isRunning)
             {
                 Thread.Sleep(rng.Next(5, 20) * 100); // 500-2000ms
                 string s = GetRandomString(rng);
-                listView1.Invoke(new MethodInvoker( delegate ()
-                {
-                    if (listView1.Items.Count == 20) listView1.Items.RemoveAt(0);
-                    listView1.Items.Add(new ListViewItem(new string[] { threadId.ToString(), s }));
-                }));
+                
                 using (SqlConnection sqlCon = new SqlConnection(connectionString))
                 {
                     sqlCon.Open();
@@ -93,6 +93,11 @@ namespace ThreadTask
                     com.ExecuteNonQuery();
                     sqlCon.Close();
                 }
+                listView1.Invoke(new MethodInvoker(delegate ()
+                {
+                    if (listView1.Items.Count == 20) listView1.Items.RemoveAt(0);
+                    listView1.Items.Add(new ListViewItem(new string[] { threadId.ToString(), s }));
+                }));
             }
         }
 
