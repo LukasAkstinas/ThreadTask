@@ -1,4 +1,5 @@
 .*/
+*.csproj.user
 [dD]ebug/
 [bB]in/
 [oO]bj/
