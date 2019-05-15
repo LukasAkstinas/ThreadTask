@@ -8,16 +8,22 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Threading;
+using System.Data.Sql;
+using System.Configuration;
+using System.Data.SqlClient;
 
 namespace ThreadTask
 {
     public partial class Form1 : Form
     {
         private Thread[] threads;
+        private readonly string connectionString;
+
 
         public Form1()
         {
             InitializeComponent();
+            connectionString = ConfigurationManager.ConnectionStrings["ThreadTask.Properties.Settings.Database1ConnectionString"].ConnectionString;
             btnStart.Enabled = false;
             btnStop.Enabled = false;
         }
@@ -64,7 +70,7 @@ namespace ThreadTask
         {
             foreach (Thread t in threads)
             {
-                t.Abort();
+                if (t.ThreadState == ThreadState.WaitSleepJoin) t.Abort(); // only abort sleeping threads, let the rest finish
             }
         }
 
@@ -80,6 +86,13 @@ namespace ThreadTask
                     if (listView1.Items.Count == 20) listView1.Items.RemoveAt(0);
                     listView1.Items.Add(new ListViewItem(new string[] { threadId.ToString(), s }));
                 }));
+                using (SqlConnection sqlCon = new SqlConnection(connectionString))
+                {
+                    sqlCon.Open();
+                    SqlCommand com = new SqlCommand(string.Format("INSERT INTO ThreadData (ThreadID, Data) VALUES ({0},\'{1}\');", threadId, s), sqlCon);
+                    com.ExecuteNonQuery();
+                    sqlCon.Close();
+                }
             }
         }
 
