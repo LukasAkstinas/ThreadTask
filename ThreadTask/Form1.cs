@@ -7,11 +7,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Threading;
 
 namespace ThreadTask
 {
     public partial class Form1 : Form
     {
+        private Thread[] threads;
+
         public Form1()
         {
             InitializeComponent();
@@ -46,17 +49,50 @@ namespace ThreadTask
 
         private void Start()
         {
-
+            listView1.Items.Clear();
+            int threadCount = int.Parse(textBox1.Text);
+            threads = new Thread[threadCount];
+            for (int t = 0; t < threadCount; ++t)
+            {
+                int threadId = t + 1;
+                threads[t] = new Thread(delegate () { DoWork(threadId); });
+                threads[t].Start();
+            }
         }
 
         private void Stop()
         {
-
+            foreach (Thread t in threads)
+            {
+                t.Abort();
+            }
         }
 
         private void DoWork(int threadId)
         {
+            Random rng = new Random((DateTime.Now.Millisecond + threadId) * threadId);
+            while (true)
+            {
+                Thread.Sleep(rng.Next(5, 20) * 100); // 500-2000ms
+                string s = GetRandomString(rng);
+                listView1.Invoke(new MethodInvoker( delegate ()
+                {
+                    if (listView1.Items.Count == 20) listView1.Items.RemoveAt(0);
+                    listView1.Items.Add(new ListViewItem(new string[] { threadId.ToString(), s }));
+                }));
+            }
+        }
 
+        private string GetRandomString(Random rng)
+        {
+            string charSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            StringBuilder sb = new StringBuilder();
+            int length = rng.Next(5, 10);
+            for (int i = 0; i < length; ++i)
+            {
+                sb.Append(charSet[rng.Next(charSet.Length)]);
+            }
+            return sb.ToString();
         }
     }
 }
